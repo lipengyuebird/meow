@@ -6,7 +6,7 @@ from data_source.noon_scaper import scrape
 search_keyword = st.text_input("Search keyword")
 
 if search_keyword:
-    products = scrape(search_keyword)
+    products = scrape(search_keyword, 3)
     data = pd.DataFrame(map(lambda p: p.model_dump(), products))
     st.write(data)
 

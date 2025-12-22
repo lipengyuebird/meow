@@ -10,5 +10,7 @@ dependencies = [
     "pandas-stubs~=2.3.3",
     "pydantic>=2.12.5",
     "selenium>=4.39.0",
+    "setuptools>=80.9.0",
     "streamlit==1.52.1",
+    "undetected-chromedriver>=3.5.5",
 ]
