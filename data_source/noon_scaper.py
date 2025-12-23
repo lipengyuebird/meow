@@ -20,10 +20,11 @@ options.add_argument("--start-maximized")
 
 
 class ProductBriefInfo(BaseModel):
+    noon_id: str = Field(description='Id on Noon')
     title: str = Field(description='Title of the product')
     price: float = Field(description='Price of the product')
-    # rate: float = Field(description='Rate of the product')
-    # rate_amount: int = Field(description='Rate amount of the product')
+    rate: float | None = Field(description='Rate of the product')
+    rate_amount: int | None = Field(description='Rate amount of the product')
     url: str = Field(description='URL of the product')
 
 
@@ -40,8 +41,10 @@ def scrape(keyword: str, pages: int = 5, sleep: int = 0):
     driver = uc.Chrome(options=options)
 
     try:
-        for page_no in range(pages):
-            print('Scraping page', page_no + 1)
+        page_no = 0
+        while True:
+            page_no += 1
+            print('Scraping page', page_no)
             # Open the URL
             url = f"https://www.noon.com/saudi-en/search/?q={urllib.parse.quote(keyword)}"
             driver.get(url)
@@ -71,14 +74,27 @@ def scrape(keyword: str, pages: int = 5, sleep: int = 0):
                 if not price:
                     price = html.xpath(
                         f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[3]/div[1]/div[1]/strong/text()')
-                # rate = html.xpath(f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[1]/div/div[2]/text()')
-                # rate_amount = html.xpath(f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[1]/div/div[3]/span/text()')
+                rate = html.xpath(f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[1]/div/div[2]/text()')
+                rate_amount = html.xpath(
+                    f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[1]/div/div[3]/span/text()')
+                if not rate:
+                    rate = html.xpath(f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[2]/div/div[2]/text()')
+                    rate_amount = html.xpath(
+                        f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[2]/div/div[3]/span/text()')
+                if not rate:
+                    rate = html.xpath(
+                        f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[2]/div[1]/text()')
+                    rate_amount = html.xpath(
+                        f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/div[1]/div[2]/div[2]/div[2]/div[2]/span/text()')
                 url = html.xpath(f'//*[@id="catalog-page-container"]/div/div/div[2]/div[4]/div[{index}]/a/@href')
                 if title:
                     try:
                         product = ProductBriefInfo(
+                            noon_id=url[0].split('/')[3],
                             title=title[0],
                             price=price[0],
+                            rate=rate[0] if rate else None,
+                            rate_amount=rate_amount[0] if rate_amount else None,
                             url=url[0],
                         )
                         products.append(product)
@@ -88,20 +104,24 @@ def scrape(keyword: str, pages: int = 5, sleep: int = 0):
                 else:
                     break
 
+            if page_no >= pages:
+                break
+
             next_page_btn = driver.find_element(
                 By.XPATH, '//*[@id="catalog-page-container"]/div/div/div[2]/div[5]/div/ul/li[last()]/a'
             )
-            print(next_page_btn)
-            # next_page_btn.find_element(By.XPATH, '/a').click()
             next_page_btn.click()
     finally:
-        # Close the browser
-        driver.quit()
+        try:
+            # Close the browser
+            driver.quit()
+        except OSError as e:
+            pass
 
     return products
 
 if __name__ == '__main__':
-    products = scrape('cat', 2, 3)
+    products = scrape('cat', 1, 3)
     print(len(products))
     for product in products:
-        print(product)
+        print(product.rate)
